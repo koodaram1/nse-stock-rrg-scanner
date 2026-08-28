@@ -14,7 +14,7 @@ def inject_css():
     .section-title{font-size:.96rem;font-weight:900;letter-spacing:.02rem;margin-top:.9rem;margin-bottom:.38rem}
     .card{background:var(--secondary-background-color);border:1px solid rgba(120,130,150,.25);border-radius:13px;padding:.68rem .78rem;margin-bottom:.55rem;box-shadow:0 1px 3px rgba(15,23,42,.04)}
     .card-buy{border-left:5px solid #16a34a}.card-info{border-left:5px solid #2563eb}.card-intra{border-left:5px solid #7c3aed}
-    .stock{font-size:1.08rem;font-weight:900}.sector{color:#64748b;font-size:.78rem;margin-top:.08rem}.rank{font-weight:900;margin-right:.3rem}
+    .stock{font-size:1.08rem;font-weight:900;display:flex;align-items:baseline;gap:.32rem}.sector{color:#64748b;font-size:.78rem;margin-top:.08rem}.rank{font-weight:900;flex:0 0 auto}
     .kv{display:grid;grid-template-columns:1fr auto;gap:.12rem .65rem;margin-top:.42rem;font-size:.83rem}
     .kv .label{color:#64748b}.kv .value{font-weight:750;text-align:right}
     .signal{display:inline-block;margin-top:.45rem;padding:.27rem .46rem;border-radius:7px;font-weight:850;font-size:.79rem}
@@ -42,11 +42,22 @@ def nav_bar(active="dashboard"):
 
 
 def pretty_sector(x):
-    s = str(x if x is not None else "-")
-    s = s.replace("_", " ")
-    s = s.replace("25 50", "25/50")
-    s = " ".join(s.split())
-    return s
+    """Presentation-only cleanup. Internal sector keys are never changed."""
+    raw = str(x if x is not None else "-").strip()
+    aliases = {
+        "FINANCIAL_SERVICES_25_50": "FINANCIAL SERVICES 25/50",
+        "FINANCIAL_SERVICES_EX_BANK": "FINANCIAL SERVICES EX-BANK",
+        "MIDSMALL_IT_TELECOM": "MIDSMALL IT & TELECOM",
+        "OIL_GAS": "OIL & GAS",
+        "COMMERCIAL_TRANSPORT_SERVICES": "COMMERCIAL TRANSPORT",
+        "CONSUMER_DURABLES": "CONSUMER DURABLES",
+        "PRIVATE_BANK": "PRIVATE BANK",
+        "PSU_BANK": "PSU BANK",
+    }
+    if raw in aliases:
+        return aliases[raw]
+    s = raw.replace("_", " ").replace("25 50", "25/50")
+    return " ".join(s.split())
 
 
 def esc(x): return html.escape(str(x if x is not None else "-"))
