@@ -2,98 +2,296 @@ import math
 import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
-from mobile_ui import inject_css,esc,nav_bar,pretty_sector
 
-st.set_page_config(page_title="NSE Stock RRG — Sector Chart",page_icon="📊",layout="centered",initial_sidebar_state="collapsed")
-inject_css(); scan=st.session_state.get("scan")
-st.markdown('<div class="mobile-title">NSE SECTOR RRG CHART</div>',unsafe_allow_html=True)
+from mobile_ui import inject_css, esc, nav_bar, pretty_sector
+
+st.set_page_config(
+    page_title="NSE Stock RRG — Sector Chart",
+    page_icon="📊",
+    layout="centered",
+    initial_sidebar_state="collapsed",
+)
+inject_css()
+
+scan = st.session_state.get("scan")
+
+st.markdown('<div class="mobile-title">NSE SECTOR RRG CHART</div>', unsafe_allow_html=True)
 nav_bar("chart")
 
 if not scan:
     st.info("Run the scanner from Dashboard first.")
     st.stop()
 
-st.markdown(f'<div class="mobile-date">Data date: {esc(scan.get("data_date","-"))} • Benchmark: NIFTY 50</div>',unsafe_allow_html=True)
-latest=scan["sector_df"].copy(); histories=scan["sector_histories"]
-colors={"LEADING":"#16a34a","IMPROVING":"#2563eb","WEAKENING":"#f59e0b","LAGGING":"#dc2626"}
-
-# Determine a stable chart range from all current points + Top-5 trails.
-xs = pd.to_numeric(latest["RS_Ratio"], errors="coerce").dropna().tolist()
-ys = pd.to_numeric(latest["RS_Momentum"], errors="coerce").dropna().tolist()
-for _,r in latest.head(5).iterrows():
-    h=histories.get(str(r["Sector"]))
-    if isinstance(h,pd.DataFrame) and not h.empty:
-        t=h.tail(8)
-        xs += pd.to_numeric(t["RS_Ratio"], errors="coerce").dropna().tolist()
-        ys += pd.to_numeric(t["RS_Momentum"], errors="coerce").dropna().tolist()
-
-xs = xs + [100.0]; ys = ys + [100.0]
-xmin,xmax=min(xs),max(xs); ymin,ymax=min(ys),max(ys)
-xpad=max(3.0,(xmax-xmin)*0.08); ypad=max(3.0,(ymax-ymin)*0.08)
-xmin-=xpad; xmax+=xpad; ymin-=ypad; ymax+=ypad
-
-fig=go.Figure()
-
-# Four clearly separated RRG quadrants.
-fig.add_shape(type="rect",x0=100,x1=xmax,y0=100,y1=ymax,fillcolor="rgba(22,163,74,0.10)",line_width=0,layer="below")
-fig.add_shape(type="rect",x0=xmin,x1=100,y0=100,y1=ymax,fillcolor="rgba(37,99,235,0.10)",line_width=0,layer="below")
-fig.add_shape(type="rect",x0=100,x1=xmax,y0=ymin,y1=100,fillcolor="rgba(245,158,11,0.10)",line_width=0,layer="below")
-fig.add_shape(type="rect",x0=xmin,x1=100,y0=ymin,y1=100,fillcolor="rgba(220,38,38,0.10)",line_width=0,layer="below")
-
-# Quadrant labels positioned away from the data center.
-fig.add_annotation(x=xmax,y=ymax,text="LEADING",showarrow=False,xanchor="right",yanchor="top",font=dict(size=11,color="#16a34a"))
-fig.add_annotation(x=xmin,y=ymax,text="IMPROVING",showarrow=False,xanchor="left",yanchor="top",font=dict(size=11,color="#3b82f6"))
-fig.add_annotation(x=xmax,y=ymin,text="WEAKENING",showarrow=False,xanchor="right",yanchor="bottom",font=dict(size=11,color="#f59e0b"))
-fig.add_annotation(x=xmin,y=ymin,text="LAGGING",showarrow=False,xanchor="left",yanchor="bottom",font=dict(size=11,color="#ef4444"))
-
-# All current sector bullets.
-for q,g in latest.groupby("Quadrant"):
-    fig.add_trace(go.Scatter(
-        x=g["RS_Ratio"],y=g["RS_Momentum"],mode="markers",
-        marker=dict(size=8,color=colors.get(q,"#94a3b8")),
-        text=[pretty_sector(v) for v in g["Sector"]],
-        hovertemplate="%{text}<br>RS Ratio %{x:.2f}<br>RS Momentum %{y:.2f}<extra></extra>",
-        showlegend=False
-    ))
-
-# Top-5 real 8-day tails.
-# Presentation-only label placement: use rank-based offsets so nearby labels
-# remain readable on a narrow mobile chart without changing any RRG data.
-_label_offsets = [
-    (0, 18),      # rank 1: above
-    (0, -18),     # rank 2: below
-    (-54, 18),    # rank 3: upper-left
-    (-54, -18),   # rank 4: lower-left
-    (34, 18),     # rank 5: upper-right
-]
-for idx,(_,r) in enumerate(latest.head(5).iterrows()):
-    raw_name=str(r["Sector"]); display_name=pretty_sector(raw_name); h=histories.get(raw_name)
-    if isinstance(h,pd.DataFrame) and not h.empty:
-        t=h.tail(8)
-        fig.add_trace(go.Scatter(
-            x=t["RS_Ratio"],y=t["RS_Momentum"],mode="lines+markers",
-            line=dict(width=2),marker=dict(size=5),name=display_name,
-            hovertemplate=display_name+"<br>RS Ratio %{x:.2f}<br>RS Momentum %{y:.2f}<extra></extra>",
-            showlegend=False
-        ))
-        xshift,yshift=_label_offsets[idx % len(_label_offsets)]
-        fig.add_annotation(
-            x=float(t["RS_Ratio"].iloc[-1]),y=float(t["RS_Momentum"].iloc[-1]),
-            text=display_name,showarrow=False,xshift=xshift,yshift=yshift,
-            font=dict(size=10),bgcolor="rgba(15,23,42,.55)",borderpad=2
-        )
-
-fig.add_vline(x=100,line_dash="dash",line_width=1,line_color="rgba(148,163,184,.65)")
-fig.add_hline(y=100,line_dash="dash",line_width=1,line_color="rgba(148,163,184,.65)")
-fig.update_xaxes(range=[xmin,xmax],title="RS Ratio",gridcolor="rgba(148,163,184,.20)")
-fig.update_yaxes(range=[ymin,ymax],title="RS Momentum",gridcolor="rgba(148,163,184,.20)")
-fig.update_layout(
-    height=575,
-    margin=dict(l=12,r=12,t=18,b=36),
-    showlegend=False,
-    hovermode="closest",
-    plot_bgcolor="rgba(0,0,0,0)",
-    paper_bgcolor="rgba(0,0,0,0)"
+st.markdown(
+    f'<div class="mobile-date">Data date: {esc(scan.get("data_date", "-"))} • Benchmark: NIFTY 50</div>',
+    unsafe_allow_html=True,
 )
-st.plotly_chart(fig,use_container_width=True,config={"displaylogo":False,"responsive":True})
-st.caption("Four colored quadrants • All sectors = current position • Top 5 = 8-day rotation trail")
+
+latest = scan["sector_df"].copy()
+histories = scan.get("sector_histories", {}) or {}
+
+QUAD_COLORS = {
+    "LEADING": "#22c55e",
+    "IMPROVING": "#3b82f6",
+    "WEAKENING": "#f59e0b",
+    "LAGGING": "#ef4444",
+    "NO DATA": "#94a3b8",
+}
+
+
+def _finite(v):
+    try:
+        return math.isfinite(float(v))
+    except Exception:
+        return False
+
+
+def _axis_bounds(values):
+    vals = [float(v) for v in values if _finite(v)]
+    if not vals:
+        return 90.0, 110.0
+    lo = min(vals + [100.0])
+    hi = max(vals + [100.0])
+    pad = max(2.5, (hi - lo) * 0.18)
+    return lo - pad, hi + pad
+
+
+# ------------------------------------------------------------
+# ETF-MOBILE-STYLE SECTOR SELECTION
+# ------------------------------------------------------------
+# Same presentation principle used in the ETF mobile chart:
+#   1) keep the most important ranked names first;
+#   2) add only a small amount of rotation context;
+#   3) every displayed point has a name;
+#   4) no anonymous/unwanted dots.
+#
+# Stock scanner calculations/rankings are NOT changed.
+
+if "Rank" in latest.columns:
+    latest["_rank"] = pd.to_numeric(latest["Rank"], errors="coerce")
+    latest = latest.sort_values(["_rank", "Sector"], na_position="last").copy()
+elif "Strength_Score" in latest.columns:
+    latest["_strength"] = pd.to_numeric(latest["Strength_Score"], errors="coerce")
+    latest = latest.sort_values(["_strength", "Sector"], ascending=[False, True]).copy()
+
+latest["Quadrant"] = latest["Quadrant"].astype(str).str.upper()
+
+wanted = []
+
+# Always keep today's Top 5 ranked sectors.
+for nm in latest["Sector"].dropna().astype(str).head(5):
+    if nm not in wanted:
+        wanted.append(nm)
+
+# Add one useful context sector from Improving, Weakening and Lagging.
+# This gives a maximum of 8 named sectors on mobile.
+for quadrant_name in ["IMPROVING", "WEAKENING", "LAGGING"]:
+    part = latest[latest["Quadrant"].eq(quadrant_name)].copy()
+
+    # Prefer strongest momentum inside the quadrant, as in the ETF mobile chart.
+    if "RS_Momentum" in part.columns:
+        part["_mom"] = pd.to_numeric(part["RS_Momentum"], errors="coerce")
+        part = part.sort_values("_mom", ascending=False)
+
+    for nm in part["Sector"].dropna().astype(str):
+        if nm not in wanted:
+            wanted.append(nm)
+            break
+
+# If one quadrant has no valid candidate, fill remaining slots with next-ranked sectors.
+for nm in latest["Sector"].dropna().astype(str):
+    if len(wanted) >= 8:
+        break
+    if nm not in wanted:
+        wanted.append(nm)
+
+wanted = wanted[:8]
+
+show = latest[latest["Sector"].astype(str).isin(wanted)].copy()
+
+# Keep display order identical to the wanted priority.
+_order = {name: i for i, name in enumerate(wanted)}
+show["_display_order"] = show["Sector"].astype(str).map(_order)
+show = show.sort_values("_display_order").copy()
+
+# ------------------------------------------------------------
+# AXIS RANGE — SELECTED SECTORS + THEIR 8-DAY TRAILS ONLY
+# ------------------------------------------------------------
+all_x = pd.to_numeric(show["RS_Ratio"], errors="coerce").dropna().tolist()
+all_y = pd.to_numeric(show["RS_Momentum"], errors="coerce").dropna().tolist()
+
+for key in show["Sector"].astype(str):
+    hist = histories.get(key)
+    if isinstance(hist, pd.DataFrame) and not hist.empty:
+        tail = hist.tail(8)
+        all_x += pd.to_numeric(tail.get("RS_Ratio"), errors="coerce").dropna().tolist()
+        all_y += pd.to_numeric(tail.get("RS_Momentum"), errors="coerce").dropna().tolist()
+
+xmin, xmax = _axis_bounds(all_x)
+ymin, ymax = _axis_bounds(all_y)
+
+fig = go.Figure()
+
+# ------------------------------------------------------------
+# FOUR COLORED QUADRANTS — SAME ETF MOBILE STYLE
+# ------------------------------------------------------------
+fig.add_shape(
+    type="rect", x0=100, x1=xmax, y0=100, y1=ymax,
+    fillcolor="rgba(34,197,94,0.10)", line_width=0, layer="below"
+)
+fig.add_shape(
+    type="rect", x0=xmin, x1=100, y0=100, y1=ymax,
+    fillcolor="rgba(59,130,246,0.10)", line_width=0, layer="below"
+)
+fig.add_shape(
+    type="rect", x0=100, x1=xmax, y0=ymin, y1=100,
+    fillcolor="rgba(245,158,11,0.10)", line_width=0, layer="below"
+)
+fig.add_shape(
+    type="rect", x0=xmin, x1=100, y0=ymin, y1=100,
+    fillcolor="rgba(239,68,68,0.10)", line_width=0, layer="below"
+)
+
+fig.add_vline(x=100, line_width=1, line_dash="dot", line_color="#8B949E")
+fig.add_hline(y=100, line_width=1, line_dash="dot", line_color="#8B949E")
+
+# Alternate label positions exactly to prevent the previous overlaps.
+text_positions = [
+    "top center",
+    "bottom center",
+    "middle left",
+    "middle right",
+    "top left",
+    "top right",
+    "bottom left",
+    "bottom right",
+]
+
+# ------------------------------------------------------------
+# EVERY DISPLAYED SECTOR = NAMED CURRENT POINT + 8-DAY TRAIL
+# No anonymous dots.
+# ------------------------------------------------------------
+for idx, (_, row) in enumerate(show.iterrows()):
+    raw_name = str(row["Sector"])
+    display_name = pretty_sector(raw_name)
+    quad = str(row.get("Quadrant", "NO DATA")).upper()
+    color = QUAD_COLORS.get(quad, QUAD_COLORS["NO DATA"])
+    hist = histories.get(raw_name)
+
+    if isinstance(hist, pd.DataFrame) and not hist.empty:
+        tail = hist.tail(8).copy()
+        hx = pd.to_numeric(tail.get("RS_Ratio"), errors="coerce")
+        hy = pd.to_numeric(tail.get("RS_Momentum"), errors="coerce")
+        mask = hx.notna() & hy.notna()
+        hx, hy = hx[mask], hy[mask]
+
+        if len(hx):
+            fig.add_trace(
+                go.Scatter(
+                    x=hx,
+                    y=hy,
+                    mode="lines+markers",
+                    line=dict(color=color, width=1.7),
+                    marker=dict(size=4, color=color),
+                    hoverinfo="skip",
+                    showlegend=False,
+                )
+            )
+
+    is_top5 = idx < 5
+
+    fig.add_trace(
+        go.Scatter(
+            x=[row["RS_Ratio"]],
+            y=[row["RS_Momentum"]],
+            mode="markers+text",
+            text=[display_name],
+            textposition=text_positions[idx % len(text_positions)],
+            textfont=dict(
+                size=10 if is_top5 else 9,
+                color=color,
+            ),
+            marker=dict(
+                size=11 if is_top5 else 9,
+                color=color,
+                line=dict(width=1.2, color="#E5E7EB"),
+            ),
+            customdata=[[quad]],
+            hovertemplate=(
+                f"<b>{display_name}</b><br>"
+                "RS Ratio: %{x:.2f}<br>"
+                "RS Momentum: %{y:.2f}<br>"
+                "Quadrant: %{customdata[0]}<extra></extra>"
+            ),
+            showlegend=False,
+        )
+    )
+
+# Quadrant labels.
+fig.add_annotation(
+    x=xmax, y=ymax, text="LEADING", showarrow=False,
+    xanchor="right", yanchor="top",
+    font=dict(color=QUAD_COLORS["LEADING"], size=11),
+)
+fig.add_annotation(
+    x=xmin, y=ymax, text="IMPROVING", showarrow=False,
+    xanchor="left", yanchor="top",
+    font=dict(color=QUAD_COLORS["IMPROVING"], size=11),
+)
+fig.add_annotation(
+    x=xmax, y=ymin, text="WEAKENING", showarrow=False,
+    xanchor="right", yanchor="bottom",
+    font=dict(color=QUAD_COLORS["WEAKENING"], size=11),
+)
+fig.add_annotation(
+    x=xmin, y=ymin, text="LAGGING", showarrow=False,
+    xanchor="left", yanchor="bottom",
+    font=dict(color=QUAD_COLORS["LAGGING"], size=11),
+)
+
+fig.update_layout(
+    height=535,
+    margin=dict(l=18, r=18, t=15, b=30),
+    paper_bgcolor="rgba(0,0,0,0)",
+    plot_bgcolor="rgba(0,0,0,0)",
+    font=dict(color="#E5E7EB", size=11),
+    xaxis=dict(
+        title="RS Ratio",
+        range=[xmin, xmax],
+        gridcolor="rgba(148,163,184,0.12)",
+        zeroline=False,
+    ),
+    yaxis=dict(
+        title="RS Momentum",
+        range=[ymin, ymax],
+        gridcolor="rgba(148,163,184,0.12)",
+        zeroline=False,
+    ),
+    hovermode="closest",
+    showlegend=False,
+)
+
+st.plotly_chart(
+    fig,
+    use_container_width=True,
+    config={"displaylogo": False, "responsive": True},
+)
+
+st.caption(
+    "ETF-style mobile chart • Top 5 ranked sectors + up to 3 rotation-context sectors • "
+    "every displayed sector is named • trail = latest 8 trading days"
+)
+
+# Compact Top-5 summary beneath the chart, matching the ETF mobile approach.
+st.markdown("**TOP 5 SECTORS**")
+top5 = show.head(5)
+for i, (_, row) in enumerate(top5.iterrows(), start=1):
+    sector = pretty_sector(str(row["Sector"]))
+    quad = str(row.get("Quadrant", "-"))
+    rsr = pd.to_numeric(pd.Series([row.get("RS_Ratio")]), errors="coerce").iloc[0]
+    rsm = pd.to_numeric(pd.Series([row.get("RS_Momentum")]), errors="coerce").iloc[0]
+
+    left, mid, right = st.columns([1.5, 1, 1])
+    left.markdown(f"**#{i} {sector}**  \n{quad}")
+    mid.metric("RS Ratio", f"{float(rsr):.2f}" if _finite(rsr) else "-")
+    right.metric("RS Mom", f"{float(rsm):.2f}" if _finite(rsm) else "-")
