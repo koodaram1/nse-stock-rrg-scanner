@@ -115,7 +115,7 @@ show["_display_order"] = show["Sector"].astype(str).map(_order)
 show = show.sort_values("_display_order").copy()
 
 # ------------------------------------------------------------
-# AXIS RANGE — SELECTED SECTORS + THEIR 8-DAY TRAILS ONLY
+# AXIS RANGE — SELECTED SECTORS + THEIR 5-DAY TRAILS ONLY
 # ------------------------------------------------------------
 all_x = pd.to_numeric(show["RS_Ratio"], errors="coerce").dropna().tolist()
 all_y = pd.to_numeric(show["RS_Momentum"], errors="coerce").dropna().tolist()
@@ -123,7 +123,7 @@ all_y = pd.to_numeric(show["RS_Momentum"], errors="coerce").dropna().tolist()
 for key in show["Sector"].astype(str):
     hist = histories.get(key)
     if isinstance(hist, pd.DataFrame) and not hist.empty:
-        tail = hist.tail(8)
+        tail = hist.tail(5)
         all_x += pd.to_numeric(tail.get("RS_Ratio"), errors="coerce").dropna().tolist()
         all_y += pd.to_numeric(tail.get("RS_Momentum"), errors="coerce").dropna().tolist()
 
@@ -168,7 +168,7 @@ text_positions = [
 ]
 
 # ------------------------------------------------------------
-# EVERY DISPLAYED SECTOR = NAMED CURRENT POINT + 8-DAY TRAIL
+# EVERY DISPLAYED SECTOR = NAMED CURRENT POINT + 5-DAY TRAIL
 # No anonymous dots.
 # ------------------------------------------------------------
 for idx, (_, row) in enumerate(show.iterrows()):
@@ -179,7 +179,7 @@ for idx, (_, row) in enumerate(show.iterrows()):
     hist = histories.get(raw_name)
 
     if isinstance(hist, pd.DataFrame) and not hist.empty:
-        tail = hist.tail(8).copy()
+        tail = hist.tail(5).copy()
         hx = pd.to_numeric(tail.get("RS_Ratio"), errors="coerce")
         hy = pd.to_numeric(tail.get("RS_Momentum"), errors="coerce")
         mask = hx.notna() & hy.notna()
@@ -250,7 +250,7 @@ fig.add_annotation(
 )
 
 fig.update_layout(
-    height=535,
+    height=485,
     margin=dict(l=18, r=18, t=15, b=30),
     paper_bgcolor="rgba(0,0,0,0)",
     plot_bgcolor="rgba(0,0,0,0)",
@@ -279,19 +279,71 @@ st.plotly_chart(
 
 st.caption(
     "ETF-style mobile chart • Top 5 ranked sectors + up to 3 rotation-context sectors • "
-    "every displayed sector is named • trail = latest 8 trading days"
+    "every displayed sector is named • trail = latest 5 trading days"
 )
 
-# Compact Top-5 summary beneath the chart, matching the ETF mobile approach.
-st.markdown("**TOP 5 SECTORS**")
+# Compact Top-5 summary beneath the chart.
+# Avoid st.metric here because its large numeric font is too heavy for mobile.
+st.markdown(
+    """
+    <style>
+    .rrg-mini-head {
+        font-size: 0.90rem;
+        font-weight: 800;
+        margin: 0.35rem 0 0.35rem 0;
+    }
+    .rrg-mini-row {
+        display: grid;
+        grid-template-columns: minmax(0, 1.75fr) 0.82fr 0.62fr 0.62fr;
+        gap: 0.35rem;
+        align-items: center;
+        padding: 0.38rem 0;
+        border-bottom: 1px solid rgba(148,163,184,0.15);
+        font-size: 0.76rem;
+        line-height: 1.20;
+    }
+    .rrg-mini-name {
+        font-weight: 800;
+        overflow-wrap: anywhere;
+    }
+    .rrg-mini-q {
+        font-weight: 700;
+        font-size: 0.72rem;
+    }
+    .rrg-mini-num {
+        text-align: right;
+        font-variant-numeric: tabular-nums;
+    }
+    .rrg-mini-label {
+        color: #94a3b8;
+        font-size: 0.63rem;
+        display: block;
+        margin-bottom: 0.05rem;
+    }
+    </style>
+    <div class="rrg-mini-head">TOP 5 SECTORS</div>
+    """,
+    unsafe_allow_html=True,
+)
+
 top5 = show.head(5)
 for i, (_, row) in enumerate(top5.iterrows(), start=1):
     sector = pretty_sector(str(row["Sector"]))
-    quad = str(row.get("Quadrant", "-"))
+    quad = str(row.get("Quadrant", "-")).upper()
     rsr = pd.to_numeric(pd.Series([row.get("RS_Ratio")]), errors="coerce").iloc[0]
     rsm = pd.to_numeric(pd.Series([row.get("RS_Momentum")]), errors="coerce").iloc[0]
+    rsr_txt = f"{float(rsr):.2f}" if _finite(rsr) else "-"
+    rsm_txt = f"{float(rsm):.2f}" if _finite(rsm) else "-"
+    q_color = QUAD_COLORS.get(quad, QUAD_COLORS["NO DATA"])
 
-    left, mid, right = st.columns([1.5, 1, 1])
-    left.markdown(f"**#{i} {sector}**  \n{quad}")
-    mid.metric("RS Ratio", f"{float(rsr):.2f}" if _finite(rsr) else "-")
-    right.metric("RS Mom", f"{float(rsm):.2f}" if _finite(rsm) else "-")
+    st.markdown(
+        f"""
+        <div class="rrg-mini-row">
+            <div class="rrg-mini-name">#{i} {esc(sector)}</div>
+            <div class="rrg-mini-q" style="color:{q_color};">{esc(quad)}</div>
+            <div class="rrg-mini-num"><span class="rrg-mini-label">RS Ratio</span>{rsr_txt}</div>
+            <div class="rrg-mini-num"><span class="rrg-mini-label">RS Mom</span>{rsm_txt}</div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
