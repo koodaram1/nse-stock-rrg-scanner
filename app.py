@@ -19,10 +19,22 @@ def best_display_sector(membership_text, sector_df):
 st.set_page_config(page_title="NSE Stock RRG",page_icon="📈",layout="centered",initial_sidebar_state="collapsed")
 inject_css()
 scan=st.session_state.get("scan")
-run_date=scan.get("run_date") if scan else "-"
-run_time=scan.get("run_time") if scan else ""
 st.markdown('<div class="mobile-title">NSE STOCK RRG</div>',unsafe_allow_html=True)
-st.markdown(f'<div class="mobile-date">Swing + Intraday • {esc(run_date)} {esc(run_time)}</div>',unsafe_allow_html=True)
+_header_meta = st.empty()
+
+def _render_header_meta(current_scan):
+    if current_scan:
+        run_date = current_scan.get("run_date", "-")
+        run_time = current_scan.get("run_time", "")
+        text = f"Swing + Intraday • {run_date} {run_time}".strip()
+    else:
+        text = "Swing + Intraday"
+    _header_meta.markdown(
+        f'<div class="mobile-date">{esc(text)}</div>',
+        unsafe_allow_html=True,
+    )
+
+_render_header_meta(scan)
 nav_bar("dashboard")
 
 if st.button("🔄 RUN SCANNER",type="primary"):
@@ -31,6 +43,7 @@ if st.button("🔄 RUN SCANNER",type="primary"):
     try:
         st.session_state["scan"]=run_scanner(progress=prog)
         scan=st.session_state["scan"]
+        _render_header_meta(scan)
         bar.empty(); st.success("Scanner completed.")
     except Exception as e:
         bar.empty(); st.error(f"Scanner could not complete: {e}"); st.stop()
