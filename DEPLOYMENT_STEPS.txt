@@ -1,0 +1,14 @@
+NSE STOCK RRG MOBILE V1.0 — DEPLOYMENT
+
+1. Create a GitHub repository.
+2. Upload ALL files/folders from this ZIP.
+3. Go to Streamlit Community Cloud.
+4. New app -> select repository -> Main file: app.py.
+5. Deploy.
+6. Open URL on mobile.
+7. Tap RUN SCANNER.
+8. Dashboard shows Top 5 Sectors + Swing Suitable.
+9. Tap INTRADAY for Top 10 Intraday Suitable.
+10. Tap SECTOR RRG CHART for the interactive chart.
+
+No Google Drive is required by the mobile app.
