@@ -17,6 +17,6 @@ if df.empty:
     st.info("No qualified Intraday shortlist now.")
 else:
     for _,r in df.iterrows():
-        body=f'<div class="stock"><span class="rank">#{int(safe(r,"Intraday_Rank",0))}</span>{esc(safe(r,"Symbol"))}</div><div class="sector">{esc(pretty_sector(safe(r,"Best_Sector")))} • Sector {qhtml(safe(r,"Sector_Quadrant"))}</div>'+metrics([("Intraday Score",num(safe(r,"Intraday_Score"),1)),("Opportunity",num(safe(r,"Opportunity_Score"),1)),("Stock RRG",qhtml(safe(r,"Stock_Quadrant"))),("Beta 60D",num(safe(r,"Beta_60D"),2)),("Avg Value 20D",f'₹{num(safe(r,"Avg_Traded_Value_20D_Cr"),2)} Cr'),("Price",money(safe(r,"Close")))])
+        body=f'<div class="stock"><span class="rank">#{int(safe(r,"Intraday_Rank",0))}</span><span>{esc(safe(r,"Symbol"))}</span></div><div class="sector">{esc(pretty_sector(safe(r,"Best_Sector")))} • Sector {qhtml(safe(r,"Sector_Quadrant"))}</div>'+metrics([("Intraday Score",num(safe(r,"Intraday_Score"),1)),("Opportunity",num(safe(r,"Opportunity_Score"),1)),("Stock RRG",qhtml(safe(r,"Stock_Quadrant"))),("Beta 60D",num(safe(r,"Beta_60D"),2)),("Avg Value 20D",f'₹{num(safe(r,"Avg_Traded_Value_20D_Cr"),2)} Cr'),("Price",money(safe(r,"Close")))])
         card(body,"intra")
 st.caption("Daily-data candidate shortlist — confirm actual intraday entry with live price, volume, spread and market conditions.")
