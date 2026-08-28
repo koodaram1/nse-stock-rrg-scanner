@@ -57,7 +57,15 @@ for q,g in latest.groupby("Quadrant"):
     ))
 
 # Top-5 real 8-day tails.
-label_shifts=[16,-16,16,-16,16]
+# Presentation-only label placement: use rank-based offsets so nearby labels
+# remain readable on a narrow mobile chart without changing any RRG data.
+_label_offsets = [
+    (0, 18),      # rank 1: above
+    (0, -18),     # rank 2: below
+    (-54, 18),    # rank 3: upper-left
+    (-54, -18),   # rank 4: lower-left
+    (34, 18),     # rank 5: upper-right
+]
 for idx,(_,r) in enumerate(latest.head(5).iterrows()):
     raw_name=str(r["Sector"]); display_name=pretty_sector(raw_name); h=histories.get(raw_name)
     if isinstance(h,pd.DataFrame) and not h.empty:
@@ -65,11 +73,14 @@ for idx,(_,r) in enumerate(latest.head(5).iterrows()):
         fig.add_trace(go.Scatter(
             x=t["RS_Ratio"],y=t["RS_Momentum"],mode="lines+markers",
             line=dict(width=2),marker=dict(size=5),name=display_name,
-            hovertemplate=display_name+"<br>RS Ratio %{x:.2f}<br>RS Momentum %{y:.2f}<extra></extra>"
+            hovertemplate=display_name+"<br>RS Ratio %{x:.2f}<br>RS Momentum %{y:.2f}<extra></extra>",
+            showlegend=False
         ))
+        xshift,yshift=_label_offsets[idx % len(_label_offsets)]
         fig.add_annotation(
             x=float(t["RS_Ratio"].iloc[-1]),y=float(t["RS_Momentum"].iloc[-1]),
-            text=display_name,showarrow=False,yshift=label_shifts[idx % len(label_shifts)],font=dict(size=10)
+            text=display_name,showarrow=False,xshift=xshift,yshift=yshift,
+            font=dict(size=10),bgcolor="rgba(15,23,42,.55)",borderpad=2
         )
 
 fig.add_vline(x=100,line_dash="dash",line_width=1,line_color="rgba(148,163,184,.65)")
@@ -77,9 +88,9 @@ fig.add_hline(y=100,line_dash="dash",line_width=1,line_color="rgba(148,163,184,.
 fig.update_xaxes(range=[xmin,xmax],title="RS Ratio",gridcolor="rgba(148,163,184,.20)")
 fig.update_yaxes(range=[ymin,ymax],title="RS Momentum",gridcolor="rgba(148,163,184,.20)")
 fig.update_layout(
-    height=610,
-    margin=dict(l=18,r=18,t=25,b=45),
-    legend=dict(orientation="h",y=-.18),
+    height=575,
+    margin=dict(l=12,r=12,t=18,b=36),
+    showlegend=False,
     hovermode="closest",
     plot_bgcolor="rgba(0,0,0,0)",
     paper_bgcolor="rgba(0,0,0,0)"
