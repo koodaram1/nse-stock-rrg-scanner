@@ -115,7 +115,7 @@ show["_display_order"] = show["Sector"].astype(str).map(_order)
 show = show.sort_values("_display_order").copy()
 
 # ------------------------------------------------------------
-# AXIS RANGE — SELECTED SECTORS + THEIR 5-DAY TRAILS ONLY
+# AXIS RANGE — SELECTED SECTORS + THEIR 3-DAY TRAILS ONLY
 # ------------------------------------------------------------
 all_x = pd.to_numeric(show["RS_Ratio"], errors="coerce").dropna().tolist()
 all_y = pd.to_numeric(show["RS_Momentum"], errors="coerce").dropna().tolist()
@@ -123,7 +123,7 @@ all_y = pd.to_numeric(show["RS_Momentum"], errors="coerce").dropna().tolist()
 for key in show["Sector"].astype(str):
     hist = histories.get(key)
     if isinstance(hist, pd.DataFrame) and not hist.empty:
-        tail = hist.tail(5)
+        tail = hist.tail(3)
         all_x += pd.to_numeric(tail.get("RS_Ratio"), errors="coerce").dropna().tolist()
         all_y += pd.to_numeric(tail.get("RS_Momentum"), errors="coerce").dropna().tolist()
 
@@ -157,18 +157,18 @@ fig.add_hline(y=100, line_width=1, line_dash="dot", line_color="#8B949E")
 
 # Alternate label positions exactly to prevent the previous overlaps.
 text_positions = [
-    "top center",
-    "bottom center",
-    "middle left",
-    "middle right",
-    "top left",
-    "top right",
-    "bottom left",
-    "bottom right",
+    "top center",      # #1
+    "bottom center",   # #2
+    "middle left",     # #3
+    "bottom left",     # #4
+    "top left",        # #5
+    "middle right",    # context
+    "bottom right",    # context
+    "top right",       # context
 ]
 
 # ------------------------------------------------------------
-# EVERY DISPLAYED SECTOR = NAMED CURRENT POINT + 5-DAY TRAIL
+# EVERY DISPLAYED SECTOR = NAMED CURRENT POINT + 3-DAY TRAIL
 # No anonymous dots.
 # ------------------------------------------------------------
 for idx, (_, row) in enumerate(show.iterrows()):
@@ -179,7 +179,7 @@ for idx, (_, row) in enumerate(show.iterrows()):
     hist = histories.get(raw_name)
 
     if isinstance(hist, pd.DataFrame) and not hist.empty:
-        tail = hist.tail(5).copy()
+        tail = hist.tail(3).copy()
         hx = pd.to_numeric(tail.get("RS_Ratio"), errors="coerce")
         hy = pd.to_numeric(tail.get("RS_Momentum"), errors="coerce")
         mask = hx.notna() & hy.notna()
@@ -191,8 +191,8 @@ for idx, (_, row) in enumerate(show.iterrows()):
                     x=hx,
                     y=hy,
                     mode="lines+markers",
-                    line=dict(color=color, width=1.7),
-                    marker=dict(size=4, color=color),
+                    line=dict(color=color, width=1.35),
+                    marker=dict(size=3.5, color=color, opacity=0.68),
                     hoverinfo="skip",
                     showlegend=False,
                 )
@@ -208,7 +208,7 @@ for idx, (_, row) in enumerate(show.iterrows()):
             text=[display_name],
             textposition=text_positions[idx % len(text_positions)],
             textfont=dict(
-                size=10 if is_top5 else 9,
+                size=(9 if len(display_name) > 20 else (10 if is_top5 else 9)),
                 color=color,
             ),
             marker=dict(
@@ -275,11 +275,6 @@ st.plotly_chart(
     fig,
     use_container_width=True,
     config={"displaylogo": False, "responsive": True},
-)
-
-st.caption(
-    "ETF-style mobile chart • Top 5 ranked sectors + up to 3 rotation-context sectors • "
-    "every displayed sector is named • trail = latest 5 trading days"
 )
 
 # Compact Top-5 summary beneath the chart.
