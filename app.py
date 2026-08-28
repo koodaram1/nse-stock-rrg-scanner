@@ -43,7 +43,7 @@ st.caption(f'Data date: {scan.get("data_date","-")} • Stocks: {scan.get("succe
 
 section("🔥 TOP 5 SECTORS")
 for _,r in scan["sector_df"].head(5).iterrows():
-    body=f'<div class="stock"><span class="rank">#{int(r["Rank"])}</span>{esc(pretty_sector(r["Sector"]))}</div><div class="sector">{qhtml(r["Quadrant"])}</div>'+metrics([("RS Ratio",num(r["RS_Ratio"],2)),("RS Momentum",num(r["RS_Momentum"],2))])
+    body=f'<div class="stock"><span class="rank">#{int(r["Rank"])}</span><span>{esc(pretty_sector(r["Sector"]))}</span></div><div class="sector">{qhtml(r["Quadrant"])}</div>'+metrics([("RS Ratio",num(r["RS_Ratio"],2)),("RS Momentum",num(r["RS_Momentum"],2))])
     card(body,"info")
 
 section("📈 SWING SUITABLE")
@@ -53,7 +53,7 @@ if swing.empty:
 else:
     for i,(_,r) in enumerate(swing.iterrows(),start=1):
         action=str(safe(r,"Action","-")); sigclass="signal-buy" if action=="BUY NOW" else "signal-dip"
-        body=f'<div class="stock"><span class="rank">#{i}</span>{esc(safe(r,"Symbol"))}</div><div class="sector">{esc(pretty_sector(best_display_sector(safe(r,"Sector"), scan["sector_df"])))} • {qhtml(safe(r,"RRG_Quadrant"))}</div>'+metrics([("Score",num(safe(r,"Opportunity_Score"),1)),("Confidence",esc(safe(r,"Confidence"))),("Price",money(safe(r,"Current_Price"))),("Buy Zone",esc(safe(r,"Buy_Zone"))),("SL",money(safe(r,"Stop_Loss"))),("T1",money(safe(r,"Target_1")))])+f'<div class="signal {sigclass}">{esc(action)}</div>'
+        body=f'<div class="stock"><span class="rank">#{i}</span><span>{esc(safe(r,"Symbol"))}</span></div><div class="sector">{esc(pretty_sector(best_display_sector(safe(r,"Sector"), scan["sector_df"])))} • {qhtml(safe(r,"RRG_Quadrant"))}</div>'+metrics([("Score",num(safe(r,"Opportunity_Score"),1)),("Confidence",esc(safe(r,"Confidence"))),("Price",money(safe(r,"Current_Price"))),("Buy Zone",esc(safe(r,"Buy_Zone"))),("SL",money(safe(r,"Stop_Loss"))),("T1",money(safe(r,"Target_1")))])+f'<div class="signal {sigclass}">{esc(action)}</div>'
         card(body,"buy")
 
 st.caption("Screening only. Intraday shortlist is based mainly on daily data; confirm entries with live broker/exchange data.")
